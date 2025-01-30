@@ -22,6 +22,11 @@ The IMC stores weights and receives input activations proportional in size to th
 Despite this optimization, the controller is required to manage variable latency and to load input activations at different timings since all inputs' maximum values determine the latency, potentially lengthening overall latency if values are dispersed. Solutions include double buffering and reordering methods.
 
 ## Overall Architecture
+
+
+![image](https://github.com/user-attachments/assets/5ff33b84-57e7-4b6e-ae36-abde4d4f6dff)
+
+
 ### IMC Macro
 The IMC macro consists of a 64x64 cell array, pairing every four rows to form a local cell array (LCA), thus creating 16 LCAs per column, each containing four cells. This configuration allows the IMC to accumulate 16 partial products from different input channels in one operation. To use a 3x3 kernel, the system expands to nine IMC macros for accumulation.
 
