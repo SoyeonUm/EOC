@@ -23,8 +23,10 @@ Despite this optimization, the controller is required to manage variable latency
 
 ## Overall Architecture
 
+The overall architecture is structured as follows:
 
-![image](https://github.com/user-attachments/assets/5ff33b84-57e7-4b6e-ae36-abde4d4f6dff)
+![image](https://github.com/user-attachments/assets/0fac1615-2886-48c3-81aa-6bdcba903368)
+
 
 
 ### IMC Macro
@@ -40,6 +42,13 @@ The input activation memory can read 256 bits at a time from a 64x256 size memor
 
 ### EOC Block
 The EOC block calculates run cycles, adjusting addresses in the input activation controller and generating pulses for the IMC.
+
+### ETC
+The IMC pulse operates at five times the speed of the master frequency. This means that during one cycle, five pulses can be generated. Consequently, over three cycles, 15 IMC pulses are produced, and in the final cycle, a signal is generated for the ADC. Therefore, to accumulate 16 pieces of data at once, a maximum of four cycles are required. Below is the timing graph illustrating the master frequency, IMC pulses, and ADC timings.
+
+![image](https://github.com/user-attachments/assets/2ee30928-70da-4a64-b78e-a0ece7350696)
+
+
 
 ## Features
 ### Double Buffering & Finding Maximum
@@ -67,6 +76,7 @@ Synthesis can be performed here.
 
 ## Results
 The waveform of the IMC operation is as follows:
+![image](https://github.com/user-attachments/assets/dae0d11c-4883-4cdd-8aa5-ba9f3ab76db0)
 
 The o_imc_pulse comprises 16 pulses, sequenced from largest to smallest values. For instance, observing o_imc_pulse[15] reveals pulse generation in the order of 7, 5, 2, 0 for input activations. During the second phase, only three ADC operations occur, as the final 16 input activations are all zero, leading to their omission. In the third phase, the last and preceding 16 input activations are zero, resulting in only two ADC operations.
 
@@ -75,7 +85,12 @@ Based on the RTL design, latency and power were measured.
 ### Latency
 The controller’s input activation size is 64x256, where 64 denotes the output channels, and 256 represents the direction of 64 4-bit input channels. Since the IMC can process 16 activations simultaneously, operations occur 64 (oCH) x 4 (LCA) times due to the division of 64x256 by 16. In the worst-case scenario, one operation requires 4 cycles. Therefore, performing 256 operations consumes a total of 1024 cycles. However, applying this to the second layer of CIFAR-10 with the ResNet18 model, the operations take only 614 cycles, a 40% reduction in computation cycles.
 
+![image](https://github.com/user-attachments/assets/d050b844-9879-4784-b00f-afb3f1d5140b)
+
+
 ### Power
 The power breakdown is as follows:
+
+![image](https://github.com/user-attachments/assets/422f8f82-1ea0-4116-9556-1dcef442f346)
 
 Additions for EOC operation, including reordering, involve eoc, buffers, and sorting components. These additions constitute only 5.3% of the total core consumption, which is 3550uW, at 187.6uW. This indicates minimal overhead due to EOC operations.
