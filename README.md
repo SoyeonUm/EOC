@@ -17,7 +17,7 @@ This project includes software simulation and RTL code development to reduce lat
 For details of the development process, see the [documentation](#https://docs.google.com/presentation/d/1S23ArIcwT69y59zL0pUIKm924a2xaRMqQ_dRSkCHZfM/edit#slide=id.g30d379e08d0_2_19).
 
 ## EOC
-The IMC stores weights and receives input activations proportional in size to the pulses entering the IMC. When using 4-bit input activations, the maximum pulse count is 15, thus typically requiring a wait of 15 pulse times before operating the ADC. However, analysis of real dataset distributions shows that waiting for 15 pulses is unnecessary as values are often lower. Thus, ADC operations only need to wait for the largest pulse time among the input activations, reducing unnecessary latency. For example, if the IMC processes four input activations at once with values 3, 6, 1, and 2, the ADC operates after just 6 pulses, not 15. For more details, refer to Kwantae's patent.
+The IMC stores weights and receives input activations proportional in size to the pulses entering the IMC. When using 4-bit input activations, the maximum pulse count is 15, thus typically requiring a wait of 15 pulse times before operating the ADC. However, analysis of real dataset distributions shows that waiting for 15 pulses is unnecessary as values are often lower. Thus, ADC operations only need to wait for the largest pulse time among the input activations, reducing unnecessary latency. For example, if the IMC processes four input activations simultaneously with values 3, 6, 1, and 2, the ADC operates after just 6 pulses, not 15. If you would like more details, please refer to Kwantae's patent.
 
 Despite this optimization, the controller is required to manage variable latency and to load input activations at different timings since all inputs' maximum values determine the latency, potentially lengthening overall latency if values are dispersed. Solutions include double buffering and reordering methods.
 
@@ -59,20 +59,45 @@ Reordering is facilitated by sorting logic in the input activation, grouping lar
 
 ## Directory Structure
 
-### pt
-Primetime for power measurement.
-
 ### rtl
-Contains RTL code, focusing on internal files like noc, top.
+The RTL code includes connections to external modules such as NoC, top, and others. However, you can focus solely on the folders within the core. The `core.v` file contains various blocks as outlined below. For detailed operation of each block, refer to the comments within each code.
 
-### sim
-Enables RTL and SYN simulations.
+```
+core.v
+ ├─ amem_ctrlr.v
+ │   ├─ amem.v
+ │   └─ sort.v
+ ├─ wmem_ctrlr.v
+ │   └─ wmem.v
+ ├─ eoc.v
+ |   └─ find_max.v
+ ├─ imc_macro.v
+ └─ inst_decoder.v
+```
 
 ### sram
-Stores necessary SRAM for input activation and weight memories.
+The design incorporates SRAM for input activation memory and weight memory. The input activation memory features a 64x32 memory array organized into 8 banks, yielding a bandwidth of 32x8=256. Similarly, the weight memory consists of a 64x32 memory array but is designed with 2 banks, providing a bandwidth of 32x2=64.
 
 ### syn
-Synthesis can be performed here.
+Synthesis can be performed assuming a 1V supply at 100MHz. The pulse operates at a frequency of 500MHz.
+
+### sim
+Both RTL and SYN simulations can be conducted. Within the tester bench (tb_rtl or tb_syn), there are top and tester components. The core block is wrapped within the top to facilitate communication with the tester via the Network-on-Chip (NoC). The tester includes external memory, and signals that dictate the operation of the core are defined through the tester.
+
+<img src="https://github.com/user-attachments/assets/b1b6dc69-6bf2-4031-b05e-3d46e3010287" width="500" height="230"/>
+
+
+
+The simulation process is divided into four stages:
+
+- 1200 ns – 10800 ns: Data is fetched from external sources and written into the input activation memory inside the core.
+- 10800 ns – 13100 ns: Data is fetched from external sources and written into the weight memory inside the core.
+- 13100 ns – 13800 ns: Data from the weight memory is read and written into the IMC core.
+- 14150 ns – 20300 ns: The IMC operation is conducted, where data from the input activation memory is fed into the IMC.
+
+### pt
+Power can be measured using PrimeTime, particularly focusing on the EOC overhead during the IMC operation from 14150 ns to 20300 ns.
+
 
 ## Results
 The waveform of the IMC operation is as follows:
@@ -85,7 +110,8 @@ Based on the RTL design, latency and power were measured.
 ### Latency
 The controller’s input activation size is 64x256, where 64 denotes the output channels, and 256 represents the direction of 64 4-bit input channels. Since the IMC can process 16 activations simultaneously, operations occur 64 (oCH) x 4 (LCA) times due to the division of 64x256 by 16. In the worst-case scenario, one operation requires 4 cycles. Therefore, performing 256 operations consumes a total of 1024 cycles. However, applying this to the second layer of CIFAR-10 with the ResNet18 model, the operations take only 614 cycles, a 40% reduction in computation cycles.
 
-![image](https://github.com/user-attachments/assets/d050b844-9879-4784-b00f-afb3f1d5140b)
+<img src="https://github.com/user-attachments/assets/d050b844-9879-4784-b00f-afb3f1d5140b" width="800" height="350"/>
+
 
 
 ### Power
@@ -93,4 +119,4 @@ The power breakdown is as follows:
 
 ![image](https://github.com/user-attachments/assets/422f8f82-1ea0-4116-9556-1dcef442f346)
 
-Additions for EOC operation, including reordering, involve eoc, buffers, and sorting components. These additions constitute only 5.3% of the total core consumption, which is 3550uW, at 187.6uW. This indicates minimal overhead due to EOC operations.
+Additions for EOC operation, including reordering, involve EOC, buffers, and sorting components. These additions constitute only 5.3% of the total core power consumption, which is 3550uW, at 187.6uW. This indicates minimal overhead due to EOC operations.
