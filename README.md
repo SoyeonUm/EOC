@@ -14,7 +14,7 @@ End-of-Computation (EOC) Controller and Software Simulation for In-Memory Comput
 ## Introduction
 This project includes software simulation and RTL code development to reduce latency in pulse-based in-memory computing (IMC). The software simulation used the CIFAR-10 dataset with the ResNet18 model to test latency reduction through reordering. The controller was synthesized and power measured using the Samsung 28nm LPP process.
 
-For details of the development process, see the [documentation](#https://docs.google.com/presentation/d/1S23ArIcwT69y59zL0pUIKm924a2xaRMqQ_dRSkCHZfM/edit?usp=sharing).
+For details on the development process, see [this documentation](https://docs.google.com/presentation/d/1S23ArIcwT69y59zL0pUIKm924a2xaRMqQ_dRSkCHZfM/edit?usp=sharing).
 
 ## EOC
 The IMC stores weights and receives input activations proportional in size to the pulses entering the IMC. When using 4-bit input activations, the maximum pulse count is 15, thus typically requiring a wait of 15 pulse times before operating the ADC. However, analysis of real dataset distributions shows that waiting for 15 pulses is unnecessary as values are often lower. Thus, ADC operations only need to wait for the largest pulse time among the input activations, reducing unnecessary latency. For example, if the IMC processes four input activations simultaneously with values 3, 6, 1, and 2, the ADC operates after just 6 pulses, not 15. If you would like more details, please refer to Kwantae's patent.
